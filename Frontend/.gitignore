@@ -1,11 +1,14 @@
-# Node modules (heavy folder - kabhi push nahi karna)
+# Node modules
 node_modules/
 
 # Build output
 dist/
 build/
 
-# Environment files (important for security)
+# Vite cache
+.vite/
+
+# Environment files
 .env
 .env.local
 .env.*.local
@@ -20,16 +23,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# IDE / Editor files
+# Editor files
 .vscode/
 .idea/
 
-# Cache files
+# Cache
 .cache/
-.parcel-cache/
-
-# Vite specific
-vite.svg
-
-# Optional (if using testing tools)
-coverage/
