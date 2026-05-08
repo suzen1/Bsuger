@@ -1,30 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import ButtomNave from "../components/ButtomNave";
 
 // ─────────────────────────────────────────────
-// MEAL TIME OPTIONS
+// CONSTANTS
 // ─────────────────────────────────────────────
 const MEAL_TIMES = [
-  { id: "breakfast", label: "Breakfast", icon: "🌅", time: "7–10 AM" },
-  { id: "lunch",     label: "Lunch",     icon: "☀️", time: "12–3 PM" },
-  { id: "snack",     label: "Snack",     icon: "🍎", time: "3–6 PM"  },
-  { id: "dinner",    label: "Dinner",    icon: "🌙", time: "7–10 PM" },
+  { id: "breakfast", label: "Breakfast", icon: "🥐" },
+  { id: "lunch", label: "Lunch", icon: "🍛" },
+  { id: "snack", label: "Snack", icon: "🍪" },
+  { id: "dinner", label: "Dinner", icon: "🍽️" }
 ];
 
-// ─────────────────────────────────────────────
-// MOCK: Aaj ke already added meals
-// Baad mein yeh MongoDB se aayega
-// ─────────────────────────────────────────────
-const INITIAL_MEALS = [
-  { id: 1, name: "Paratha",   qty: 2, unit: "pieces", sugarPer: 4,  totalSugar: 8,  mealTime: "breakfast", icon: "🫓" },
-  { id: 2, name: "Chai",      qty: 1, unit: "cup",    sugarPer: 8,  totalSugar: 8,  mealTime: "breakfast", icon: "☕" },
-  { id: 3, name: "Dal Chawal",qty: 1, unit: "plate",  sugarPer: 14, totalSugar: 14, mealTime: "lunch",     icon: "🍛" },
-];
+const INITIAL_MEALS = [];
+
+// Token helper — har request mein chahiye
+const getAuthHeader = () => ({
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`
+  }
+});
 
 // ─────────────────────────────────────────────
 // CLAUDE AI se sugar fetch karne ka function
-// Yeh ASLI API call hai — Claude ko prompt bhejta hai
 // ─────────────────────────────────────────────
 async function fetchSugarFromAI(foodName) {
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -89,14 +88,14 @@ export default function MealLogger() {
   const navigate = useNavigate();
 
   // ── STATES ──
-  const [foodInput, setFoodInput]     = useState("");       // user jo type kar raha hai
-  const [aiResult, setAiResult]       = useState(null);     // Claude ka jawab
-  const [aiLoading, setAiLoading]     = useState(false);    // loading spinner
-  const [aiError, setAiError]         = useState("");       // error message
-  const [quantity, setQuantity]       = useState(1);        // kitna khaya
+  const [foodInput, setFoodInput] = useState("");       // user jo type kar raha hai
+  const [aiResult, setAiResult] = useState(null);     // Claude ka jawab
+  const [aiLoading, setAiLoading] = useState(false);    // loading spinner
+  const [aiError, setAiError] = useState("");       // error message
+  const [quantity, setQuantity] = useState(1);        // kitna khaya
   const [selectedTime, setSelectedTime] = useState("lunch"); // konsa waqt
-  const [meals, setMeals]             = useState(INITIAL_MEALS); // aaj ke meals
-  const [addedMsg, setAddedMsg]       = useState("");        // success toast
+  const [meals, setMeals] = useState(INITIAL_MEALS); // aaj ke meals
+  const [addedMsg, setAddedMsg] = useState("");        // success toast
   const inputRef = useRef(null);
 
   // Font load
@@ -493,7 +492,7 @@ export default function MealLogger() {
       </div>
 
       {/* ── BOTTOM NAV ── */}
-     <ButtomNave/>
+      <ButtomNave />
     </div>
   );
 }

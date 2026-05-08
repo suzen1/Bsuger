@@ -1,43 +1,24 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-// --- MOCK DATA (baad mein API se aayega) ---
-const USER = {
-  name: "Arjun",
-  dailyLimit: 60,
-  consumed: 38,
-  status: "pre-diabetic", // normal | pre-diabetic | diabetic
-  fasting: 112,
-  postMeal: 158,
-};
-
-const MEALS = [
-  { id: 1, name: "Paratha", qty: "2 pieces", sugar: 4, time: "8:30 AM", icon: "🫓" },
-  { id: 2, name: "Chai", qty: "1 cup", sugar: 8, time: "10:00 AM", icon: "☕" },
-  { id: 3, name: "Dal Chawal", qty: "1 plate", sugar: 14, time: "1:30 PM", icon: "🍛" },
-  { id: 4, name: "Mango", qty: "1 medium", sugar: 12, time: "4:00 PM", icon: "🥭" },
-];
+import ButtomNave from "../components/ButtomNave";
 
 const STATUS_CONFIG = {
-  normal: { label: "Normal", color: "#10b981", bg: "#ecfdf5", ring: "#a7f3d0" },
-  "pre-diabetic": { label: "Pre-Diabetic", color: "#f59e0b", bg: "#fffbeb", ring: "#fde68a" },
-  diabetic: { label: "Diabetic", color: "#ef4444", bg: "#fef2f2", ring: "#fecaca" },
+  normal:        { label: "Normal",       color: "#10b981", bg: "#ecfdf5", ring: "#a7f3d0" },
+  "pre-diabetic":{ label: "Pre-Diabetic", color: "#f59e0b", bg: "#fffbeb", ring: "#fde68a" },
+  diabetic:      { label: "Diabetic",     color: "#ef4444", bg: "#fef2f2", ring: "#fecaca" },
 };
 
-// Circular progress SVG
 function CircularProgress({ consumed, limit }) {
-  const pct = Math.min((consumed / limit) * 100, 100);
-  const r = 70;
-  const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
+  const pct   = Math.min((consumed / limit) * 100, 100);
+  const r     = 70;
+  const circ  = 2 * Math.PI * r;
+  const dash  = (pct / 100) * circ;
   const color = pct < 80 ? "#10b981" : pct < 100 ? "#f59e0b" : "#ef4444";
 
   return (
     <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
       <svg width="180" height="180" style={{ transform: "rotate(-90deg)" }}>
-        {/* Track */}
         <circle cx="90" cy="90" r={r} fill="none" stroke="#f0fdf4" strokeWidth="14" />
-        {/* Progress */}
         <circle
           cx="90" cy="90" r={r} fill="none"
           stroke={color} strokeWidth="14"
@@ -61,7 +42,6 @@ function CircularProgress({ consumed, limit }) {
   );
 }
 
-// Alert Banner
 function AlertBanner({ consumed, limit }) {
   const pct = (consumed / limit) * 100;
   if (pct < 80) return null;
@@ -87,25 +67,80 @@ function AlertBanner({ consumed, limit }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [dashData,  setDashData]  = useState(null);
+  const [loading,   setLoading]   = useState(true);
   const [activeTab, setActiveTab] = useState("today");
-  const [meals] = useState(MEALS);
-  const cfg = STATUS_CONFIG[USER.status];
 
   useEffect(() => {
-    // Google font load
     const link = document.createElement("link");
     link.href = "https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap";
     link.rel = "stylesheet";
     document.head.appendChild(link);
   }, []);
 
-  const remaining = USER.dailyLimit - USER.consumed;
-  const pct = Math.round((USER.consumed / USER.dailyLimit) * 100);
+  // ── Real API call ──
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) { navigate("/"); return; }
+
+        const res  = await fetch("/api/dashboard", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+
+        if (res.status === 401) {
+          localStorage.clear();
+          navigate("/");
+          return;
+        }
+
+        const data = await res.json();
+        setDashData(data);
+      } catch (err) {
+        console.error("Dashboard error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  // ── Loading ──
+  if (loading) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fffe" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 48, margin: 0 }}>🩸</p>
+        <p style={{ color: "#10b981", fontWeight: 600, marginTop: 12 }}>Loading your dashboard...</p>
+      </div>
+    </div>
+  );
+
+  if (!dashData) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 32 }}>😕</p>
+        <p style={{ color: "#6b7280" }}>Data load nahi hua</p>
+        <button onClick={() => window.location.reload()}
+          style={{ background: "#10b981", color: "#fff", border: "none", borderRadius: 10, padding: "10px 20px", cursor: "pointer", marginTop: 10 }}>
+          Dobara Try Karo
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── Real data variables ──
+  const USER      = dashData.user;
+  const consumed  = dashData.consumed  || 0;
+  const meals     = dashData.meals     || [];
+  const limit     = USER.dailySugarLimit || 50;
+  const remaining = limit - consumed;
+  const cfg       = STATUS_CONFIG[USER.sugarStatus] || STATUS_CONFIG["normal"];
 
   return (
     <div style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "#f8fffe", minHeight: "100vh" }}>
 
-      {/* ── TOP NAVBAR ── */}
+      {/* NAVBAR */}
       <nav style={{
         background: "#fff", borderBottom: "1px solid #e8faf4",
         padding: "0 20px", height: 60,
@@ -115,12 +150,9 @@ export default function Dashboard() {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 22 }}>🩸</span>
-          <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: "#065f46" }}>
-            BSUGAR
-          </span>
+          <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: "#065f46" }}>BSUGAR</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Status badge */}
           <span style={{
             background: cfg.bg, color: cfg.color,
             border: `1px solid ${cfg.ring}`,
@@ -129,73 +161,91 @@ export default function Dashboard() {
           }}>
             {cfg.label.toUpperCase()}
           </span>
-          {/* Avatar */}
           <div style={{
             width: 36, height: 36, borderRadius: "50%",
             background: "linear-gradient(135deg, #10b981, #059669)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer"
+            color: "#fff", fontWeight: 700, fontSize: 14
           }}>
-            {USER.name[0]}
+            {USER.name?.[0]?.toUpperCase() || "U"}
           </div>
         </div>
       </nav>
 
-      {/* ── MAIN CONTENT ── */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "20px 16px 100px" }}>
 
         {/* Greeting */}
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: "#064e3b", margin: 0 }}>
-            Assalam o Alaikum, {USER.name} 👋
+            Hii, {USER.name} 👋
           </h2>
           <p style={{ color: "#6b7280", fontSize: 13, margin: "4px 0 0" }}>
             {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
           </p>
         </div>
 
-        {/* Alert */}
-        <AlertBanner consumed={USER.consumed} limit={USER.dailyLimit} />
+        <AlertBanner consumed={consumed} limit={limit} />
 
-        {/* ── MAIN GRID ── desktop: 2 col, mobile: 1 col */}
+        {/* ── PROFILE CARD — onboarding ka data ── */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 16, marginBottom: 16
+          background: "#fff", borderRadius: 20,
+          padding: "16px 20px", boxShadow: "0 2px 20px rgba(16,185,129,0.08)",
+          border: "1px solid #e8faf4", marginBottom: 16
         }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#9ca3af", margin: "0 0 12px" }}>
+            👤 YOUR PROFILE
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 10 }}>
+            {[
+              { label: "Age",    value: USER.age    ? `${USER.age} yrs`   : "—" },
+              { label: "Gender", value: USER.gender ? USER.gender          : "—" },
+              { label: "Weight", value: USER.weight ? `${USER.weight} kg` : "—" },
+              { label: "Height", value: USER.height ? `${USER.height} cm` : "—" },
+            ].map(item => (
+              <div key={item.label} style={{
+                background: "#f8fffe", borderRadius: 12,
+                padding: "10px 8px", textAlign: "center",
+                border: "1px solid #e8faf4"
+              }}>
+                <p style={{ fontSize: 9, color: "#9ca3af", margin: 0, letterSpacing: 1 }}>
+                  {item.label.toUpperCase()}
+                </p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "#065f46", margin: "4px 0 0", textTransform: "capitalize" }}>
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-          {/* SUGAR METER CARD */}
+        {/* MAIN GRID */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
+
+          {/* SUGAR METER */}
           <div style={{
             background: "#fff", borderRadius: 20,
             padding: "24px 20px", boxShadow: "0 2px 20px rgba(16,185,129,0.08)",
             border: "1px solid #e8faf4", display: "flex", flexDirection: "column", alignItems: "center"
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#9ca3af", marginBottom: 16, margin: "0 0 16px" }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#9ca3af", margin: "0 0 16px" }}>
               TODAY'S SUGAR METER
             </p>
-            <CircularProgress consumed={USER.consumed} limit={USER.dailyLimit} />
-            {/* Mini stats */}
+            <CircularProgress consumed={consumed} limit={limit} />
             <div style={{ display: "flex", gap: 24, marginTop: 20, width: "100%", justifyContent: "center" }}>
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 20, fontWeight: 700, color: "#10b981", margin: 0 }}>{USER.consumed}g</p>
-                <p style={{ fontSize: 10, color: "#9ca3af", margin: 0, marginTop: 2 }}>CONSUMED</p>
-              </div>
-              <div style={{ width: 1, background: "#f0fdf4" }} />
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 20, fontWeight: 700, color: remaining > 0 ? "#065f46" : "#ef4444", margin: 0 }}>
-                  {remaining > 0 ? remaining + "g" : "0g"}
-                </p>
-                <p style={{ fontSize: 10, color: "#9ca3af", margin: 0, marginTop: 2 }}>REMAINING</p>
-              </div>
-              <div style={{ width: 1, background: "#f0fdf4" }} />
-              <div style={{ textAlign: "center" }}>
-                <p style={{ fontSize: 20, fontWeight: 700, color: "#374151", margin: 0 }}>{USER.dailyLimit}g</p>
-                <p style={{ fontSize: 10, color: "#9ca3af", margin: 0, marginTop: 2 }}>DAILY LIMIT</p>
-              </div>
+              {[
+                { val: `${consumed}g`,                                        label: "CONSUMED",  color: "#10b981"                          },
+                { val: remaining > 0 ? `${remaining}g` : "0g",               label: "REMAINING", color: remaining > 0 ? "#065f46" : "#ef4444" },
+                { val: `${limit}g`,                                           label: "DAILY LIMIT",color: "#374151"                         },
+              ].map((s, i) => (
+                <div key={i} style={{ textAlign: "center" }}>
+                  <p style={{ fontSize: 20, fontWeight: 700, color: s.color, margin: 0 }}>{s.val}</p>
+                  <p style={{ fontSize: 10, color: "#9ca3af", margin: 0, marginTop: 2 }}>{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* SUGAR REPORT CARD */}
+          {/* SUGAR REPORT */}
           <div style={{
             background: "#fff", borderRadius: 20,
             padding: "24px 20px", boxShadow: "0 2px 20px rgba(16,185,129,0.08)",
@@ -205,82 +255,65 @@ export default function Dashboard() {
               SUGAR REPORT SUMMARY
             </p>
 
-            {/* Fasting */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>🌙 Fasting Sugar</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: USER.fasting < 100 ? "#10b981" : USER.fasting < 126 ? "#f59e0b" : "#ef4444" }}>
-                  {USER.fasting} mg/dL
-                </span>
-              </div>
-              <div style={{ background: "#f0fdf4", borderRadius: 8, height: 8, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 8,
-                  width: `${Math.min((USER.fasting / 200) * 100, 100)}%`,
-                  background: USER.fasting < 100 ? "#10b981" : USER.fasting < 126 ? "#f59e0b" : "#ef4444",
-                  transition: "width 1s ease"
-                }} />
-              </div>
-              <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Normal: &lt;100 mg/dL</p>
-            </div>
+            {/* Fasting bar */}
+            {[
+              { label: "🌙 Fasting Sugar",  val: USER.lastFasting,  max: 200, good: 100, bad: 126, note: "Normal: <100 mg/dL"  },
+              { label: "🍽️ Post-Meal (PP)", val: USER.lastPostMeal, max: 280, good: 140, bad: 200, note: "Normal: <140 mg/dL" },
+            ].map(row => {
+              const barColor = row.val < row.good ? "#10b981" : row.val < row.bad ? "#f59e0b" : "#ef4444";
+              return (
+                <div key={row.label} style={{ marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>{row.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: barColor }}>
+                      {row.val || "—"} mg/dL
+                    </span>
+                  </div>
+                  <div style={{ background: "#f0fdf4", borderRadius: 8, height: 8, overflow: "hidden" }}>
+                    <div style={{
+                      height: "100%", borderRadius: 8,
+                      width: `${Math.min(((row.val || 0) / row.max) * 100, 100)}%`,
+                      background: barColor, transition: "width 1s ease"
+                    }} />
+                  </div>
+                  <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>{row.note}</p>
+                </div>
+              );
+            })}
 
-            {/* Post meal */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>🍽️ Post-Meal (PP)</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: USER.postMeal < 140 ? "#10b981" : USER.postMeal < 200 ? "#f59e0b" : "#ef4444" }}>
-                  {USER.postMeal} mg/dL
-                </span>
-              </div>
-              <div style={{ background: "#f0fdf4", borderRadius: 8, height: 8, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 8,
-                  width: `${Math.min((USER.postMeal / 280) * 100, 100)}%`,
-                  background: USER.postMeal < 140 ? "#10b981" : USER.postMeal < 200 ? "#f59e0b" : "#ef4444",
-                  transition: "width 1s ease"
-                }} />
-              </div>
-              <p style={{ fontSize: 10, color: "#9ca3af", margin: "4px 0 0" }}>Normal: &lt;140 mg/dL</p>
-            </div>
-
-            {/* Status */}
+            {/* Status box */}
             <div style={{
               background: cfg.bg, border: `1px solid ${cfg.ring}`,
               borderRadius: 12, padding: "12px 14px",
               display: "flex", alignItems: "center", gap: 10
             }}>
               <span style={{ fontSize: 20 }}>
-                {USER.status === "normal" ? "✅" : USER.status === "pre-diabetic" ? "⚠️" : "🔴"}
+                {USER.sugarStatus === "normal" ? "✅" : USER.sugarStatus === "pre-diabetic" ? "⚠️" : "🔴"}
               </span>
               <div>
-                <p style={{ fontWeight: 700, color: cfg.color, fontSize: 13, margin: 0 }}>
-                  {cfg.label} Range
-                </p>
+                <p style={{ fontWeight: 700, color: cfg.color, fontSize: 13, margin: 0 }}>{cfg.label} Range</p>
                 <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
-                  {USER.status === "normal" ? "Keep it up!" :
-                    USER.status === "pre-diabetic" ? "Control diet carefully" :
-                      "Please consult doctor"}
+                  {USER.sugarStatus === "normal" ? "Keep it up!" :
+                    USER.sugarStatus === "pre-diabetic" ? "Control diet carefully" : "Please consult doctor"}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── MEAL LOG CARD ── */}
+        {/* MEAL LOG */}
         <div style={{
           background: "#fff", borderRadius: 20,
           padding: "24px 20px", boxShadow: "0 2px 20px rgba(16,185,129,0.08)",
           border: "1px solid #e8faf4", marginBottom: 16
         }}>
-          {/* Tabs */}
           <div style={{ display: "flex", gap: 4, background: "#f0fdf4", borderRadius: 12, padding: 4, marginBottom: 20 }}>
             {["today", "weekly"].map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 flex: 1, padding: "8px 0", borderRadius: 9, border: "none", cursor: "pointer",
                 background: activeTab === tab ? "#10b981" : "transparent",
                 color: activeTab === tab ? "#fff" : "#6b7280",
-                fontWeight: 600, fontSize: 12, fontFamily: "inherit",
-                transition: "all 0.2s"
+                fontWeight: 600, fontSize: 12, fontFamily: "inherit", transition: "all 0.2s"
               }}>
                 {tab === "today" ? "Today's Meals" : "Weekly View"}
               </button>
@@ -288,98 +321,84 @@ export default function Dashboard() {
           </div>
 
           {activeTab === "today" && (
-            <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {meals.map(meal => (
-                  <div key={meal.id} style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    padding: "12px 14px", background: "#f8fffe",
-                    borderRadius: 14, border: "1px solid #e8faf4"
-                  }}>
-                    <span style={{ fontSize: 24, minWidth: 32, textAlign: "center" }}>{meal.icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600, fontSize: 13, color: "#1f2937", margin: 0 }}>{meal.name}</p>
-                      <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>{meal.qty} · {meal.time}</p>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
+            meals.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#9ca3af" }}>
+                <p style={{ fontSize: 32, margin: 0 }}>🍽️</p>
+                <p style={{ margin: "8px 0 0", fontSize: 13 }}>Aaj koi meal add nahi kiya</p>
+                <button onClick={() => navigate("/meals")} style={{
+                  marginTop: 12, background: "#10b981", color: "#fff",
+                  border: "none", borderRadius: 10, padding: "8px 18px",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer"
+                }}>
+                  + Meal Add Karo
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {meals.map(meal => (
+                    <div key={meal._id} style={{
+                      display: "flex", alignItems: "center", gap: 14,
+                      padding: "12px 14px", background: "#f8fffe",
+                      borderRadius: 14, border: "1px solid #e8faf4"
+                    }}>
+                      <span style={{ fontSize: 24, minWidth: 32, textAlign: "center" }}>{meal.icon || "🍽️"}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 600, fontSize: 13, color: "#1f2937", margin: 0, textTransform: "capitalize" }}>
+                          {meal.name}
+                        </p>
+                        <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>
+                          {meal.quantity} {meal.unit} · {meal.mealTime}
+                        </p>
+                      </div>
                       <span style={{
-                        background: meal.sugar > 10 ? "#fef9c3" : "#ecfdf5",
-                        color: meal.sugar > 10 ? "#ca8a04" : "#059669",
-                        fontWeight: 700, fontSize: 13,
-                        padding: "3px 10px", borderRadius: 20
+                        background: meal.totalSugar > 10 ? "#fef9c3" : "#ecfdf5",
+                        color: meal.totalSugar > 10 ? "#ca8a04" : "#059669",
+                        fontWeight: 700, fontSize: 13, padding: "3px 10px", borderRadius: 20
                       }}>
-                        +{meal.sugar}g
+                        +{meal.totalSugar}g
                       </span>
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Total row */}
-              <div style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                marginTop: 14, paddingTop: 14, borderTop: "1px dashed #d1fae5"
-              }}>
-                <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>Total consumed</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#065f46" }}>{USER.consumed}g / {USER.dailyLimit}g</span>
-              </div>
-            </>
+                  ))}
+                </div>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginTop: 14, paddingTop: 14, borderTop: "1px dashed #d1fae5"
+                }}>
+                  <span style={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>Total consumed</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#065f46" }}>{consumed}g / {limit}g</span>
+                </div>
+              </>
+            )
           )}
 
           {activeTab === "weekly" && (
             <div style={{ textAlign: "center", padding: "30px 0", color: "#9ca3af" }}>
               <p style={{ fontSize: 32, margin: 0 }}>📊</p>
-              <p style={{ margin: "8px 0 0", fontSize: 13 }}>Weekly chart aayega — baad mein API connect hone par</p>
+              <p style={{ margin: "8px 0 0", fontSize: 13 }}>Weekly chart — coming soon</p>
             </div>
           )}
         </div>
 
-        {/* ── TIPS CARD ── */}
-        <div style={{
-          background: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)",
-          borderRadius: 20, padding: "20px", color: "#fff"
-        }}>
+        {/* AI TIP */}
+        <div style={{ background: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)", borderRadius: 20, padding: "20px", color: "#fff" }}>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6ee7b7", margin: "0 0 10px" }}>
             💡 AI TIP FOR TODAY
           </p>
           <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, color: "#d1fae5" }}>
-            Aapki post-meal sugar thodi zyada hai. Aaj raat ke khane mein <strong style={{ color: "#fff" }}>white rice ki jagah brown rice</strong> try karein aur meethe se door rahein.
+            {USER.sugarStatus === "diabetic"
+              ? <><strong style={{ color: "#fff" }}>Meetha bilkul avoid karein</strong> — aapki sugar level high hai. Doctor se zaroor milein.</>
+              : USER.sugarStatus === "pre-diabetic"
+              ? <>Post-meal sugar thodi zyada hai. <strong style={{ color: "#fff" }}>White rice ki jagah brown rice</strong> try karein.</>
+              : <>Aap normal range mein hain! <strong style={{ color: "#fff" }}>Healthy diet jaari rakho</strong> aur daily limit ka dhyan rakho.</>
+            }
           </p>
         </div>
 
       </div>
 
-      {/* ── BOTTOM NAV (mobile) ── */}
-      <nav style={{
-        position: "fixed", bottom: 0, left: 0, right: 0,
-        background: "#fff", borderTop: "1px solid #e8faf4",
-        display: "flex", justifyContent: "space-around", alignItems: "center",
-        height: 64, zIndex: 100,
-        boxShadow: "0 -4px 20px rgba(16,185,129,0.08)"
-      }}>
-        {[
-          { icon: "🏠", label: "Home", path: "/dashbord", active: true },
-          { icon: "➕", label: "Add Meal", path: "/mealogger", active: false },
-          { icon: "📋", label: "Reports", path: "/reports", active: false },
-          { icon: "👤", label: "Profile", path: "/profile", active: false },
-        ].map(item => (
-          <button key={item.label} onClick={() => navigate(item.path)} style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            gap: 2, background: "none", border: "none", cursor: "pointer",
-            padding: "6px 12px", borderRadius: 12,
-            opacity: item.active ? 1 : 0.5
-          }}>
-            <span style={{ fontSize: 20 }}>{item.icon}</span>
-            <span style={{
-              fontSize: 9, fontWeight: item.active ? 700 : 500,
-              color: item.active ? "#10b981" : "#6b7280",
-              fontFamily: "inherit", letterSpacing: 0.5
-            }}>
-              {item.label}
-            </span>
-          </button>
-        ))}
-      </nav>
+      {/* BOTTOM NAV */}
+      <ButtomNave/>
 
     </div>
   );

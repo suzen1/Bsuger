@@ -1,6 +1,26 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+// ─────────────────────────────────────────
+// HELPER FUNCTIONS
+// ─────────────────────────────────────────
+function calculateLimit(data) {
+  if (data.fastingSugar >= 126 || data.postMealSugar >= 200) return 25;
+  if (data.fastingSugar >= 100 || data.postMealSugar >= 140) return 35;
+  return 50;
+}
+
+function getStatus(data) {
+  if (data.fastingSugar >= 126 || data.postMealSugar >= 200) return "diabetic";
+  if (data.fastingSugar >= 100 || data.postMealSugar >= 140) return "pre-diabetic";
+  return "normal";
+}
+
 const steps = ["Personal Info", "Sugar Report", "Summary"]
-const Onbording = () => {
+
+const Onboarding = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     name: "",
     age: "",
@@ -12,33 +32,92 @@ const Onbording = () => {
     hba1c: "",
     reportMonth: "",
   });
+
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleNext = () => {
-
+    // Step 1 validation
+    if (currentStep === 0) {
+      if (!formData.name || !formData.age || !formData.gender || !formData.weight || !formData.height) {
+        setError("Sab fields zaroori hain");
+        return;
+      }
+    }
+    // Step 2 validation
+    if (currentStep === 1) {
+      if (!formData.fastingSugar || !formData.postMealSugar) {
+        setError("Fasting aur Post-Meal sugar zaroori hai");
+        return;
+      }
+    }
+    setError("");
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
-  }
+  };
+
   const handleBack = () => {
+    setError("");
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setLoading(true);
-    console.log(formData);
-    setTimeout(() => {
+    setError("");
+
+    try {
+      const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      if (!token || !user) {
+        navigate("/");
+        return;
+      }
+
+      const res = await fetch("/api/auth/onboarding", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId:          user.id,
+          age:             Number(formData.age),
+          gender:          formData.gender,
+          weight:          Number(formData.weight),
+          height:          Number(formData.height),
+          lastFasting:     Number(formData.fastingSugar),
+          lastPostMeal:    Number(formData.postMealSugar),
+          dailySugarLimit: calculateLimit(formData),
+          sugarStatus:     getStatus(formData),
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Kuch galat hua");
+        return;
+      }
+
+      // ✅ FIXED — sahi route
+      navigate("/dashbord");
+
+    } catch (err) {
+      console.error(err);
+      setError("Server se connect nahi ho pa raha");
+    } finally {
       setLoading(false);
-      alert("Form submitted successfully!");
-    }, 2000);
-  }
+    }
+  };
 
   return (
     <div className="min-h-screen  from-emerald-50 to-teal-100 flex items-center justify-center p-4">
@@ -56,7 +135,6 @@ const Onbording = () => {
         <div className="flex items-center justify-between mb-8">
           {steps.map((step, index) => (
             <div key={index} className="flex items-center">
-              {/* Circle */}
               <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all
                 ${index < currentStep ? "bg-emerald-500 text-white" : ""}
                 ${index === currentStep ? "bg-emerald-600 text-white ring-4 ring-emerald-200" : ""}
@@ -64,13 +142,11 @@ const Onbording = () => {
               `}>
                 {index < currentStep ? "✓" : index + 1}
               </div>
-              {/* Label */}
               <span className={`ml-1 text-xs hidden sm:block
                 ${index === currentStep ? "text-emerald-600 font-semibold" : "text-gray-400"}
               `}>
                 {step}
               </span>
-              {/* Line between steps */}
               {index < steps.length - 1 && (
                 <div className={`h-0.5 w-8 mx-2 rounded
                   ${index < currentStep ? "bg-emerald-400" : "bg-gray-200"}
@@ -79,6 +155,13 @@ const Onbording = () => {
             </div>
           ))}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl px-4 py-3 mb-4 font-medium">
+            ❌ {error}
+          </div>
+        )}
 
         {/* STEP 1 — Personal Info */}
         {currentStep === 0 && (
@@ -174,7 +257,6 @@ const Onbording = () => {
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-gray-400">mg/dL</span>
               </div>
-              {/* Live status */}
               {formData.fastingSugar && (
                 <p className={`text-xs mt-1 font-medium
                   ${formData.fastingSugar < 100 ? "text-green-600" : ""}
@@ -287,6 +369,23 @@ const Onbording = () => {
                   <span className="font-medium">{formData.hba1c || "—"} %</span>
                 </div>
               </div>
+
+              {/* Calculated values preview */}
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                <p className="text-xs text-gray-400 mb-2 font-semibold uppercase tracking-wide">AI Calculated</p>
+                <div className="grid grid-cols-2 gap-1 text-sm">
+                  <span className="text-gray-500">Daily Limit:</span>
+                  <span className="font-bold text-emerald-600">{calculateLimit(formData)}g sugar</span>
+                  <span className="text-gray-500">Status:</span>
+                  <span className={`font-bold capitalize
+                    ${getStatus(formData) === "normal" ? "text-green-600" : ""}
+                    ${getStatus(formData) === "pre-diabetic" ? "text-yellow-600" : ""}
+                    ${getStatus(formData) === "diabetic" ? "text-red-600" : ""}
+                  `}>
+                    {getStatus(formData)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -325,4 +424,4 @@ const Onbording = () => {
   );
 }
 
-export default Onbording
+export default Onboarding
