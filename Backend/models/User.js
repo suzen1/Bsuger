@@ -27,9 +27,24 @@ const userSchema = new mongoose.Schema(
     gender: { type: String, enum: ["male", "female", "other"] },
     weight: { type: Number },   // kg mein
     height: { type: Number },   // cm mein
+    phone: { type: String },
+    bloodType: { type: String },
+
+    // Health targets
+    targetFasting: { type: Number, default: 100 },      // fasting blood sugar target mg/dL
+    targetPostMeal: { type: Number, default: 140 },     // post-meal blood sugar target mg/dL
+
+    // Medical info
+    medications: { type: String },
+    doctorName: { type: String },
+    doctorPhone: { type: String },
 
     // AI ne calculate kiya daily sugar limit
     dailySugarLimit: { type: Number, default: 50 },
+
+    // Onboarding values
+    lastFasting: { type: Number },
+    lastPostMeal: { type: Number },
 
     // User ka status — report se decide hoga
     sugarStatus: {

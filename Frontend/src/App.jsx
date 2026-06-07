@@ -1,7 +1,7 @@
 import React from 'react'
-import Onbording from './pages/Onbording'
-import Dashbord from './pages/Dashbord'
-import Mealogger from './pages/mealogger'
+import Onboarding from './pages/Onboarding'
+import Dashboard from './pages/Dashboard'
+import MealLogger from './pages/MealLogger'
 import Reports from './pages/Reports'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
@@ -12,9 +12,9 @@ const App = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Login />} />
-        <Route path='/onbording' element={<Onbording />} />
-        <Route path='/dashbord' element={<Dashbord />} />
-        <Route path='/mealogger' element={<Mealogger />} />
+        <Route path='/onboarding' element={<Onboarding />} />
+        <Route path='/dashboard' element={<Dashboard />} />
+        <Route path='/meals' element={<MealLogger />} />
         <Route path='/reports' element={<Reports />} />
         <Route path='/profile' element={<Profile />} />
       </Routes>

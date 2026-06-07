@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import protect from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -109,13 +110,22 @@ router.post("/login", async (req, res) => {
 // ONBOARDING UPDATE — PUT /api/auth/onboarding
 // Weight, height, gender — onboarding ke baad save
 // ─────────────────────────────────────────
-router.put("/onboarding", async (req, res) => {
+router.put("/onboarding", protect, async (req, res) => {
   try {
-    const { userId, age, gender, weight, height, dailySugarLimit, sugarStatus } = req.body;
+    const { age, gender, weight, height, dailySugarLimit, sugarStatus, lastFasting, lastPostMeal } = req.body;
 
     const user = await User.findByIdAndUpdate(
-      userId,
-      { age, gender, weight, height, dailySugarLimit, sugarStatus },
+      req.user.id,
+      { 
+        age: Number(age), 
+        gender, 
+        weight: Number(weight), 
+        height: Number(height), 
+        dailySugarLimit: Number(dailySugarLimit), 
+        sugarStatus,
+        lastFasting: Number(lastFasting),
+        lastPostMeal: Number(lastPostMeal)
+      },
       { new: true }   // updated user return karo
     );
 
@@ -125,6 +135,7 @@ router.put("/onboarding", async (req, res) => {
     });
 
   } catch (err) {
+    console.error("Onboarding PUT error:", err.message);
     res.status(500).json({ message: "Server error" });
   }
 });

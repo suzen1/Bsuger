@@ -3,14 +3,15 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import authRoutes      from "./routes/auth.js";
-import mealRoutes      from "./routes/meals.js";
-import reportRoutes    from "./routes/reports.js";
+import authRoutes from "./routes/auth.js";
+import mealRoutes from "./routes/meals.js";
+import reportRoutes from "./routes/reports.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import profileRoutes from "./routes/profile.js";
 
 dotenv.config();
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
@@ -19,10 +20,11 @@ app.use(cors({
   credentials: true
 }));
 
-app.use("/api/auth",      authRoutes);
-app.use("/api/meals",     mealRoutes);
-app.use("/api/reports",   reportRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/meals", mealRoutes);
+app.use("/api/reports", reportRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ message: "BSUGAR Server chal raha hai! 🩸" });

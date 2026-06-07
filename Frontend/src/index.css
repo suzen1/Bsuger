@@ -1,2 +1,62 @@
-@import "tailwindcss";
+/* ═══════════════════════════════════════════════
+   BSUGAR — Dark Mode Global Styles
+   ═══════════════════════════════════════════════ */
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background: #0a0f0d;
+  color: #e8fdf4;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar Styling ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a0f0d; }
+::-webkit-scrollbar-thumb { background: #1a2e23; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+/* ── Keyframe Animations ── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+  50% { box-shadow: 0 0 35px rgba(16,185,129,0.45); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ringDraw {
+  from { stroke-dashoffset: 440; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes subtlePulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* ── Tailwind Reset Compat ── */
+@import "tailwindcss";
