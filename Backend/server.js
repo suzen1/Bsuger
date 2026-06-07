@@ -15,8 +15,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
+const frontendUrl = process.env.FRONTEND_URL;
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: frontendUrl ? [frontendUrl, "http://localhost:5173"] : "http://localhost:5173",
   credentials: true
 }));
 
@@ -35,10 +36,15 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("✅ MongoDB connected!");
-    app.listen(PORT, () => {
-      console.log(`🚀 Server: http://localhost:${PORT}`);
-    });
   })
   .catch((err) => {
     console.error("❌ MongoDB error:", err.message);
   });
+
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, () => {
+    console.log(`🚀 Local Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
